@@ -17,56 +17,6 @@
 - 시스템 구축 프로세스를 통한 시스템 화면 변경, 이미지 to 비디오 재생, Scene 관리자, 스마트 포인터 구현
 - 성능 개선과 사용성 강화를 위해 길 찾기 A*, Object Pooling, MapTool의 타일 크기 확장 구현
 
-## 프로그램 개발
-<details>
-<summary>구현 기능</summary>
-<div markdown="1">
-
-### 길 찾기 알고리즘 A*
-![ASTAR](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/37735091-8606-4697-8129-2d908cb51c6c)  
-Enemy가 Player에게 다가가기 위해 오직 목적지만 탐색하는 A* 적합하다 판단, A* 설계 중 목적지(player 위치)까지 계산 방식인 F = G(시작점 기준 현재 노드까지 비용) + H(현재 노드에서 목적지까지 거리)를 ParentNode(최소 비용으로 계산된 이전 노드들)에 담아 이를 enemy에게 이동 명령 처리와 이동 중 원거리 특성상 유효 사거리에 들어올 경우 이동 중단 명령 처리가 필요하다 판단, 이를 매 프레임마다 enemy 거리(시작점)와 player 거리(도착점)을 구해 a* 수행, 단, 적 유효 사거리일 경우 중단 조건과 매 프레임마다 a* 수행은 성능 이슈로 이어질 것으로 판단하여 player가 이동하지 않는다면 a*는 한 번만 수행하게끔 최적화 개선
-
-### **타일 크기 확장 기능 구현**
-![타일 크기 확장 기능 구현](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/f394ab77-1def-429e-ae45-38a00db75f15)  
-맵툴 알고리즘 개발 과정에서 타일 설치 시 임의로 크기를 확장해야 하는 필요성 인식, 구현 시 타일을 드래그하여 설치 시 크기를 어떻게 확장시킬지에 대한 해결책이 필요. 드래그 이후 충돌 시점에서 새 좌표를 통해 타일 크기를 확장하는 방법 도입하여 문제 해결
-
-### 오브젝트 풀링 활용 오버헤드 개선
-![오브젝트 풀링 오버헤드 개선](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/46afc6cb-1145-42e5-a757-0a22ea20fee9)  
-초당 소모되는 총알 생성 및 소멸 시 오버헤드 우려, 이는 게임 성능 저하와 게임 몰입 방해로 이어질 것으로 판단, 이는 초당 100여개 이상 즉 100ms 이상 비용 발생,  60프레임 렌더링에서 100ms / 1/60 * 100% = 166%이라는 치명적 성능 저하. 따라서 오브젝트 풀링 기술 도입. 200여개 객체를 미리 생성 후 풀에 저장 이를 풀에서 재활용 처리하며 관리. 도입 결과 166% 성능 저하 최소화 성과 달성
-
-### 추상팩토리 디자인 패턴(유닛 관리)
-![추상팩토리](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/40e5f58d-096c-4f87-a8f9-ce1a1a03dc8d)  
-팩토리패턴은 타입 별로 생산할 수 없어, Monster를 구현한 객체들을 타입 별로 생산할 수 있는 추상 팩토리 패턴이 적합 판단, 해당 클래스에 각 타입을 반환 메서드들을 기입하여 상황에 맞게 생산할 수 있게 처리 → ex 제품 추상 팩토리의 메서드 A는 오직 Monster를 상속한 A 객체만 생산
-
-### 싱글톤 디자인패턴
-여러 씬에서 메모리 공간에 얽매이지 않고 공용으로 사용할 유틸 클래스들을 어떻게 사용해야 할까 고민, 이를 하나의 전역 메모리에서 사용할 수 있는 싱글톤 디자인패턴을 고려, 하지만 각 유틸마다 타입이 다르기 때문에 하나의 메모리에서 사용하게 할 수 있을지 고민. template(제네릭)할 경우 공용화가 가능할 수 있다 판단 및 시도 결과 여러 씬에서 Sound, Screen, Option 등 여러 클래스를 공용 사용할 수 있게 해결
-
-### Image Video 인트로 구현(비디오 재생 알고리즘)
-![오프닝을 재생시키기 위해 여러 장의 그림들을 하나의 이미지에 압축.](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/f3ef9d4e-d7aa-4d5a-9755-ef6c38750dd3)  
-오프닝을 재생시키기 위해 여러 장의 그림들을 하나의 이미지에 압축.
-
-![인트로 재생](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/11112819-929f-4d35-bc6d-9f3aa9e3dd50)  
-winAPI 버전 호환 문제로 video api 사용 불가능, 대안으로 영상을 이미지로 변환하여 출력 방법을 고려, 하지만 수백장 이미지를 어떻게 묶어 재생할 수 있을지 고민, 이를 해결하기 위해 기존 image 클래스에 재생 옵션을 추가한 video 클래스와 제어하기 위한 video controller를 도입하여 프레임 단위로 영상 재생하도록 구현
-
-### GameSceneManager(gameSceneMgr) 성능 개선
-![scene](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/e5d765f8-2c9c-4de7-883d-81cc641f9db2)  
-gameSceneMgr에서 관리되는 Scene 외 요소들 낭비되고 있는 것 발견, 이로 인해 게임 Scene의 로딩과 동작 중 성능 저하가 발생할 것으로 판단. CPU Scheduling Algorithm 도입 과정에서 ready, blocked, running 구조화를 접목 후 최적화 시도 결과, 재사용성 가능과 실행 중 씬 외의 자원 낭비 방지, 10% 성능 향상
-
-### 상태 패턴을 활용한 여러 씬에서 UI 버튼 클래스 재사용성 향상
-![상태 패턴 활용](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/c088d6d9-0221-4a7a-9652-18730fdc589e)  
-여러 씬들 효율적 관리 고민, 각 씬에서 버튼 클래스를 개별 사용함으로써 코드 중복성 증가 및 유지보수가 떨어짐. 이를 각 상태에 대응할 수 있는 상태 디자인 패턴이 적합 판단 후 접목 후 버튼 관련  코드 최소화 달성, 이를 통해 유지보수성과 생산성 향상
-
-### 해상도 변경 알고리즘
-![해상도 변경 1](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/aa79aa61-a1db-4beb-8b03-fc0b14e46fa3)
-![해상도 변경2](https://github.com/songbyhyeok/2022-Enter-the-Gungeon/assets/63230518/6f828bce-29cc-4390-8a2a-cbc3b3b1096a)  
-화면 변경 시 픽셀, 비율, 스케일 조정에 대한 필요성 고려, 픽셀에 따른 비율 고려와 조정, 스케일 계산에 대한 문제 발생, 이를 화면에 따른 비율 레퍼런스를 참고하여 계산 공식을 연구, (가로 픽셀 / 가로 비율) * 세로 비율의 계산 결과 토대로 GCD(최대공약수) 알고리즘 사용을 하면 되는 것을 알게됨. 이를 통해 계산, 스케일 계산은 게임 수학 행렬과 스케일 이론을 참고 해상도 * 스케일 비율 계산 사용
-
-### 스마트포인터
-Unmanaged 언어 특성상 프로그램 규모가 커짐에 따라 메모리 누수 가능성 고려, 이를 해결하기 위해 스마트포인터 도입, 각 객체 has-a 관계인 포인터 객체가 의존성이 높을 경우 unique_ptr을 사용, 역이라면 shared_ptr를 사용하여 상황을 고려하여 설계
-
-</div>
-</details>
-
 <!-- <details>
 <summary>회고</summary>
 <div markdown="1">
@@ -85,10 +35,7 @@ Unmanaged 언어 특성상 프로그램 규모가 커짐에 따라 메모리 누
 </div>
 </details> -->
 
-<details>
-<summary>유의할 점</summary>
-<div markdown="1">
-  
+## 참고
 ![227455629-3c952306-5110-4606-9cac-364a09f79ac5](https://user-images.githubusercontent.com/63230518/227720467-91c547af-376a-44fe-a037-3340859dcbcf.png)
 
 이전 커밋 기록 .git 파일 (git Lfs 이슈로 인해 커밋 초기화할 수 밖에 없어 남겨둡니다.)
@@ -100,8 +47,7 @@ https://drive.google.com/file/d/1PjhTHGqkLZwO74MkHWBBOHL-_e-vhfge/view?usp=shari
 https://drive.google.com/file/d/1N_XjV-e7wwBK-BdkCtuTEju2pL8QZwac/view?usp=sharing
 
 사진 속 가리키는 폴더 내부에 붙여 넣으시면 됩니다.
-</div>
-</details>
+
 
 
 
